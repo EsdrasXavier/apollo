@@ -18,8 +18,11 @@
   },
   "homepage": "https://github.com/EsdrasXavier/apollo#readme",
   "dependencies": {
+    "@discordjs/opus": "^0.3.2",
     "discord": "^0.8.2",
     "discord.js": "^12.3.1",
-    "youtube-audio-stream": "^0.3.6"
+    "ffmpeg-static": "^4.2.7",
+    "youtube-audio-stream": "^0.3.6",
+    "ytdl-core": "^3.2.2"
   }
 }
