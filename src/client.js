@@ -1,6 +1,5 @@
-const config = require("./config.json");
+require('dotenv/config');
 const ytdl = require('ytdl-core');
-
 const PLAY = 'play';
 const STOP = 'stop';
 
@@ -38,10 +37,10 @@ const handlers = {
 }
 
 const messageHandler = msg => {
-  if (!msg.content.startsWith(config.prefix) || msg.author.bot) return;
+  if (!msg.content.startsWith(process.env.PREFIX) || msg.author.bot) return;
   if (msg.channel.type === 'dm') return;
 
-  const args = msg.content.slice(config.prefix).trim().split(' ');
+  const args = msg.content.slice(process.env.PREFIX).trim().split(' ');
   const command = args.shift().toLowerCase();
   handlers[command.substring(1)](msg, args);
 }
