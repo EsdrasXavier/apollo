@@ -1,12 +1,26 @@
 require('dotenv/config');
 const ytdl = require('ytdl-core');
+const Queue = require('./Queue');
 const PLAY = 'play';
 const STOP = 'stop';
+const NEXT = 'next';
+const PREVIOUS = 'previous';
+
+const guildsQueues = {};
+
+const getCurrentQueue = (connection, message) => {
+  let currentQueue = guildsQueues[message.guild.id];
+
+  if (currentQueue == null) {
+    currentQueue = new Queue(connection);
+    guildsQueues[message.guild.id] = currentQueue;
+  }
+
+  return currentQueue;
+}
 
 const handlers = {
-  [PLAY]: async (message, args) => {
-    if (message.channel.type === 'dm') return;
-
+  [PLAY]: (message, args) => {
     const voiceChannel = message.member.voice.channel;
 
     if (!voiceChannel) {
@@ -20,10 +34,14 @@ const handlers = {
     }
 
     voiceChannel.join().then(connection => {
-      const stream = ytdl(youtubeUrl, { filter: 'audioonly' });
-      const dispatcher = connection.play(stream);
+      let currentQueue = getCurrentQueue(connection, message);
 
-      // dispatcher.on('finish', () => voiceChannel.leave());
+      currentQueue.enqueue(youtubeUrl);
+
+      if (!currentQueue.isRunning()) {
+        currentQueue.next();
+        play(connection, currentQueue);
+      }
     });
   },
   [STOP]: message => {
@@ -32,8 +50,56 @@ const handlers = {
       return message.reply('You need to join a voice channel first!');
     }
 
-    voiceChannel.leave();
+    voiceChannel.join().then(connection => {
+      connection.stop();
+    });
+  },
+  [NEXT]: message => {
+    const voiceChannel = message.member.voice.channel;
+
+    if (!voiceChannel) {
+      return message.reply('You need to join a voice channel first!');
+    }
+
+    voiceChannel.join().then(connection => {
+      let currentQueue = getCurrentQueue(connection, message);
+
+      if (currentQueue == null) {
+        return;
+      }
+
+      if (currentQueue.next())
+        play(connection, currentQueue);
+    });
+  },
+  [PREVIOUS]: message => {
+    const voiceChannel = message.member.voice.channel;
+
+    if (!voiceChannel) {
+      return message.reply('You need to join a voice channel first!');
+    }
+
+    voiceChannel.join().then(connection => {
+      let currentQueue = getCurrentQueue(connection, message);
+
+      if (currentQueue == null) {
+        return;
+      }
+
+      if (currentQueue.previous())
+        play(connection, currentQueue);
+    });
   }
+}
+
+const play = (connection, currentQueue) => {
+  const stream = ytdl(currentQueue.current(), { filter: 'audioonly' });
+  const dispatcher = connection.play(stream);
+  dispatcher.on('finish', () => {
+    if (currentQueue.next() != null) {
+      play(connection, currentQueue.current());
+    }
+  });
 }
 
 const messageHandler = msg => {
